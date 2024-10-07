@@ -218,6 +218,26 @@ Steam — это цифровая платформа для дистрибуци
 
 В таком случае, исходя из пикового RPS по всем основным ручкам (2151.3 RPS) получаем, что на обработку SSL каждую секунду потребуется 2151.3 * 3 = 6453.9 мс = 6.5 секунд вычислительного времени. 
 
+## 5. Логическая схема БД
+Схема:  
+![Untitled](https://github.com/user-attachments/assets/4b2900bf-0c2b-4822-bf4b-af4c4b20ba5e)
+
+| Таблица             | Размеры данных                                                                                                           | Консистентность |
+|---------------------|--------------------------------------------------------------------------------------------------------------------------|-----------------|
+| session             | (16 token + 8 user_id + 8 expire) * 135 млн. MAU = **4 ГБ**                                                              | - |
+| user                | (8 id + 64 nick + 64 login + 128 pass_hash + 64 pass_salt + 8 created_at + 8 avatar) * 1 млрд пользователей = **320 ГБ** | при удалении user удаляются все его session, review, friendship_request, friendship, upload, purchase, profile_comment |
+| review              | (8 id + 8 user_id + 8 game_page_id + 1024 comment + 1 vote + 8 created_at) * 125 млн. обзоров = **123 ГБ**               | при удалении или изменении review пересчитываем game_page.rating |
+| friendship_request  | (8 user_from + 8 user_to + 1 status + 8 created_at) * 1 млрд. пользователей * ~3 заявки от каждого = **69 ГБ**           | - |
+| upload              | (8 id + 8 user_id + 128 path) * 1 млрд. пользователей * ~3 аплоада от каждого = **402 ГБ**                               | при удалении также удаляются связанные screenshot |
+| screenshot          | (8 id + 8 upload_id) * 1 млрд. пользователей = **15 ГБ**                                                                 | - |
+| friendship          | (8 user1 + 8 user2 + 8 created_at) * 1 млрд. пользователей * ~2 друга у каждого = **44 ГБ**                              | - |
+| purchase            | (8 id + 8 game_id + 8 user_id + 8 purchased_at) * 580 млн. покупок = **17 ГБ**                                           | - |
+| profile_comment     | (8 id + 8 author_id + 8 user_id + 128 comment + 8 created_at) * 340 млн. комментариев = **50 ГБ**                        | - |
+| mediafile           | (8 id + 128 path) * 100 тыс. игр * 10 медиафайлов = **129 МБ**                                                           | при удалении также удаляются связанные game_page_mediafile |
+| game                | (8 id + 128 path) * 100 тыс. игр = **12 МБ**                                                                             | при удалении также удаляются связанные game_page и purchase |
+| game_page           | (8 id + 8 game_id + 16 title + 10*1024 description + 256 requirements + 4 rating) * 100 тыс. игр = **1 ГБ**              | при удалении также удаляются связанные review |
+| game_page_mediafile | (8 game_id + 8 mediafile_id) * 100 тыс. игр * 10 медиафайлов = **15 МБ**                                                 | - |
+
 [^1]: https://backlinko.com/steam-users
 [^2]: https://store.steampowered.com/charts
 [^3]: https://worldpopulationreview.com/country-rankings/steam-users-by-country
